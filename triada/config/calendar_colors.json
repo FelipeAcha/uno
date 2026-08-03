@@ -1,0 +1,70 @@
+{
+  "version": "0.1.0",
+  "google_calendar_event_colors": {
+    "2": {
+      "hex": "#7ae7bf",
+      "activity_type": "MEDITATION_RECOVERY",
+      "label_es": "Meditación, recuperación e integración emocional"
+    },
+    "10": {
+      "hex": "#51b749",
+      "activity_type": "EXERCISE_MOVEMENT",
+      "label_es": "Ejercicio, deporte y movimiento"
+    },
+    "5": {
+      "hex": "#fbd75b",
+      "activity_type": "FOOD_HYDRATION",
+      "label_es": "Alimentación e hidratación"
+    },
+    "3": {
+      "hex": "#dbadff",
+      "activity_type": "PERSONAL_RECREATION",
+      "label_es": "Tiempo personal, recreación y asuntos no laborales"
+    },
+    "4": {
+      "hex": "#ff887c",
+      "activity_type": "FAMILY_FRIENDS",
+      "label_es": "Familia, amistades, pareja y vínculos"
+    },
+    "9": {
+      "hex": "#5484ed",
+      "activity_type": "SOLO_DEEP_WORK",
+      "label_es": "Trabajo individual o profundo"
+    },
+    "1": {
+      "hex": "#a4bdfc",
+      "activity_type": "FIELD_OPERATIONS",
+      "label_es": "Trabajo de campo, operación y visitas"
+    },
+    "7": {
+      "hex": "#46d6db",
+      "activity_type": "COLLABORATIVE_WORK",
+      "label_es": "Reuniones y trabajo con otras personas"
+    },
+    "6": {
+      "hex": "#ffb878",
+      "activity_type": "TRANSPORT_LOGISTICS",
+      "label_es": "Traslados y logística"
+    },
+    "8": {
+      "hex": "#e1e1e1",
+      "activity_type": "RITUAL_REVIEW_ADMIN",
+      "label_es": "Check-in, check-out, revisión y administración"
+    },
+    "11": {
+      "hex": "#dc2127",
+      "activity_type": "URGENT_RISK",
+      "label_es": "Urgencia real, riesgo o límite violado"
+    }
+  },
+  "domains": ["SELF", "WORK", "RELATIONSHIPS"],
+  "daily_soft_corridor_percent": {
+    "minimum": 18,
+    "maximum": 48
+  },
+  "weekly_target_percent": {
+    "SELF": 33.333,
+    "WORK": 33.333,
+    "RELATIONSHIPS": 33.333
+  }
+}
