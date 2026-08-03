@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +9,7 @@ MODULE_PATH = Path(__file__).parents[1] / "src" / "triada_balance.py"
 SPEC = importlib.util.spec_from_file_location("triada_balance", MODULE_PATH)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = MODULE
 SPEC.loader.exec_module(MODULE)
 
 Activity = MODULE.Activity
