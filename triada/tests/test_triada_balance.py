@@ -22,16 +22,19 @@ def dt(value: str) -> datetime:
     return datetime.fromisoformat(value)
 
 
-def test_calculate_balance_and_alerts() -> None:
+def test_non_allocable_sleep_does_not_distort_balance() -> None:
     activities = [
-        Activity(dt("2026-08-03T08:00:00-05:00"), dt("2026-08-03T09:00:00-05:00"), "SELF", "MEASURED", "MEDITATION_RECOVERY"),
-        Activity(dt("2026-08-03T09:00:00-05:00"), dt("2026-08-03T13:00:00-05:00"), "WORK", "MEASURED", "SOLO_DEEP_WORK"),
-        Activity(dt("2026-08-03T18:00:00-05:00"), dt("2026-08-03T20:00:00-05:00"), "RELATIONSHIPS", "SELF_REPORTED", "FAMILY_FRIENDS"),
+        Activity(dt("2026-08-03T00:00:00-05:00"), dt("2026-08-03T08:00:00-05:00"), "SELF", "MEASURED", "SLEEP", "NON_ALLOCABLE"),
+        Activity(dt("2026-08-03T08:00:00-05:00"), dt("2026-08-03T09:00:00-05:00"), "SELF", "MEASURED", "MEDITATION_RECOVERY", "ALLOCABLE"),
+        Activity(dt("2026-08-03T09:00:00-05:00"), dt("2026-08-03T13:00:00-05:00"), "WORK", "MEASURED", "SOLO_DEEP_WORK", "ALLOCABLE"),
+        Activity(dt("2026-08-03T18:00:00-05:00"), dt("2026-08-03T20:00:00-05:00"), "RELATIONSHIPS", "SELF_REPORTED", "FAMILY_FRIENDS", "ALLOCABLE"),
     ]
 
     result = calculate_balance(activities)
 
-    assert result["total_minutes"] == 420.0
+    assert result["tracked_minutes"] == 900.0
+    assert result["allocable_minutes"] == 420.0
+    assert result["non_allocable_minutes"] == 480.0
     assert result["percent_by_domain"] == {
         "SELF": 14.3,
         "WORK": 57.1,
@@ -41,18 +44,27 @@ def test_calculate_balance_and_alerts() -> None:
     assert "WORK_ABOVE_SOFT_CORRIDOR" in result["alerts"]
 
 
-def test_parse_activity_rejects_unknown_domain() -> None:
+def test_parse_activity_rejects_unknown_scope() -> None:
     row = {
         "start": "2026-08-03T08:00:00-05:00",
         "end": "2026-08-03T09:00:00-05:00",
-        "domain": "OTHER",
+        "domain": "SELF",
         "evidence": "MEASURED",
-        "activity_type": "UNKNOWN",
+        "activity_type": "SLEEP",
+        "allocation_scope": "OTHER",
     }
 
     try:
         parse_activity(row, 2)
     except TriadaInputError as exc:
-        assert "domain must be one of" in str(exc)
+        assert "allocation_scope must be one of" in str(exc)
     else:
         raise AssertionError("Expected TriadaInputError")
+
+
+def test_no_allocable_data_is_explicit() -> None:
+    result = calculate_balance([
+        Activity(dt("2026-08-03T00:00:00-05:00"), dt("2026-08-03T08:00:00-05:00"), "SELF", "MEASURED", "SLEEP", "NON_ALLOCABLE")
+    ])
+    assert result["allocable_minutes"] == 0.0
+    assert result["alerts"] == ["NO_ALLOCABLE_DATA"]
