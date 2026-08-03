@@ -1,5 +1,10 @@
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "balance_denominator": {
+    "scope": "ALLOCABLE_WAKING_TIME",
+    "excluded_but_tracked": ["SLEEP", "UNAVOIDABLE_BIOLOGICAL_MAINTENANCE"]
+  },
+  "allocation_scopes": ["ALLOCABLE", "NON_ALLOCABLE"],
   "google_calendar_event_colors": {
     "2": {
       "hex": "#7ae7bf",
