@@ -7,8 +7,12 @@ The input CSV must contain:
 - domain: SELF, WORK, or RELATIONSHIPS
 - evidence: MEASURED, ESTIMATED, or SELF_REPORTED
 - activity_type: free text taxonomy value
+- allocation_scope: ALLOCABLE or NON_ALLOCABLE
 
-Only example or locally generated files should be processed. Do not commit
+Only ALLOCABLE waking time enters the one-third balance denominator. Sleep and
+unavoidable biological maintenance can remain tracked as NON_ALLOCABLE.
+
+Only fictional or locally generated files should be committed. Do not commit
 personal production data to GitHub.
 """
 
@@ -26,6 +30,7 @@ from typing import Iterable
 
 DOMAINS = ("SELF", "WORK", "RELATIONSHIPS")
 EVIDENCE_LEVELS = ("MEASURED", "ESTIMATED", "SELF_REPORTED")
+ALLOCATION_SCOPES = ("ALLOCABLE", "NON_ALLOCABLE")
 SOFT_MIN_PERCENT = 18.0
 SOFT_MAX_PERCENT = 48.0
 
@@ -41,6 +46,7 @@ class Activity:
     domain: str
     evidence: str
     activity_type: str
+    allocation_scope: str
 
     @property
     def minutes(self) -> float:
@@ -57,11 +63,15 @@ def parse_datetime(value: str, field: str, row_number: int) -> datetime:
 
 
 def parse_activity(row: dict[str, str], row_number: int) -> Activity:
-    missing = [
-        field
-        for field in ("start", "end", "domain", "evidence", "activity_type")
-        if not row.get(field)
-    ]
+    required = (
+        "start",
+        "end",
+        "domain",
+        "evidence",
+        "activity_type",
+        "allocation_scope",
+    )
+    missing = [field for field in required if not row.get(field)]
     if missing:
         raise TriadaInputError(
             f"Row {row_number}: missing required fields: {', '.join(missing)}"
@@ -84,12 +94,20 @@ def parse_activity(row: dict[str, str], row_number: int) -> Activity:
             f"Row {row_number}: evidence must be one of {', '.join(EVIDENCE_LEVELS)}"
         )
 
+    allocation_scope = row["allocation_scope"].strip().upper()
+    if allocation_scope not in ALLOCATION_SCOPES:
+        raise TriadaInputError(
+            f"Row {row_number}: allocation_scope must be one of "
+            f"{', '.join(ALLOCATION_SCOPES)}"
+        )
+
     return Activity(
         start=start,
         end=end,
         domain=domain,
         evidence=evidence,
         activity_type=row["activity_type"].strip(),
+        allocation_scope=allocation_scope,
     )
 
 
@@ -107,20 +125,24 @@ def read_activities(path: Path) -> list[Activity]:
 def calculate_balance(activities: Iterable[Activity]) -> dict[str, object]:
     minutes_by_domain: dict[str, float] = defaultdict(float)
     minutes_by_evidence: dict[str, float] = defaultdict(float)
+    minutes_by_scope: dict[str, float] = defaultdict(float)
 
     for activity in activities:
-        minutes_by_domain[activity.domain] += activity.minutes
         minutes_by_evidence[activity.evidence] += activity.minutes
+        minutes_by_scope[activity.allocation_scope] += activity.minutes
+        if activity.allocation_scope == "ALLOCABLE":
+            minutes_by_domain[activity.domain] += activity.minutes
 
-    total = sum(minutes_by_domain.values())
+    allocable_total = minutes_by_scope["ALLOCABLE"]
+    tracked_total = sum(minutes_by_scope.values())
     percentages = {
-        domain: (minutes_by_domain[domain] / total * 100.0 if total else 0.0)
+        domain: (minutes_by_domain[domain] / allocable_total * 100.0 if allocable_total else 0.0)
         for domain in DOMAINS
     }
 
     alerts = []
-    if total == 0:
-        alerts.append("NO_DATA")
+    if allocable_total == 0:
+        alerts.append("NO_ALLOCABLE_DATA")
     else:
         for domain in DOMAINS:
             percent = percentages[domain]
@@ -130,7 +152,9 @@ def calculate_balance(activities: Iterable[Activity]) -> dict[str, object]:
                 alerts.append(f"{domain}_ABOVE_SOFT_CORRIDOR")
 
     return {
-        "total_minutes": round(total, 1),
+        "tracked_minutes": round(tracked_total, 1),
+        "allocable_minutes": round(allocable_total, 1),
+        "non_allocable_minutes": round(minutes_by_scope["NON_ALLOCABLE"], 1),
         "minutes_by_domain": {
             domain: round(minutes_by_domain[domain], 1) for domain in DOMAINS
         },
@@ -150,7 +174,7 @@ def calculate_balance(activities: Iterable[Activity]) -> dict[str, object]:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Calculate TRIADA time balance from an activity CSV."
+        description="Calculate TRIADA balance from assignable waking-time activities."
     )
     parser.add_argument("csv_path", type=Path, help="Path to activity CSV")
     parser.add_argument(
