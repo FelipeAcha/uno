@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converging Waters — Integrated Internal Research</title>
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#174d39">
+<style>
+html,body{height:100%;margin:0}body{display:grid;place-items:center;background:#f5efe6;color:#10261d;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.loading{max-width:34rem;padding:2rem;text-align:center}.spinner{width:2.5rem;height:2.5rem;margin:0 auto 1rem;border:.25rem solid #d8c9ad;border-top-color:#174d39;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="loading"><div class="spinner" aria-hidden="true"></div><strong>Loading Converging Waters…</strong><p>This page is a self-contained public working brief.</p></div>
+<script>
+(async()=>{
+  if (!("DecompressionStream" in window)) throw new Error("This browser does not support the required decompression API. Please use a current browser.");
+  const files=[0,1,2,3,4,5].map(i=>`chunks/${i}.txt`);
+  const responses=await Promise.all(files.map(async url=>{const r=await fetch(url,{cache:"no-store"});if(!r.ok)throw new Error(`Missing site asset: ${url}`);return r.text();}));
+  const compressed=responses.join("").trim();
+  const bytes=Uint8Array.from(atob(compressed),c=>c.charCodeAt(0));
+  const html=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  document.open(); document.write(html); document.close();
+})().catch(error=>{
+  document.body.innerHTML='<main class="loading"><h1>Unable to load the brief</h1><p>'+String(error.message||error)+'</p></main>';
+  console.error(error);
+});
+</script>
+</body>
+</html>
