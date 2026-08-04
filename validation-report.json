@@ -1,0 +1,114 @@
+{
+  "validated_at_utc": "2026-08-04T17:58:58.632108+00:00",
+  "site_url": "https://felipeacha.github.io/uno/",
+  "deployment_attempts": [
+    {
+      "attempt": 1,
+      "status": 200
+    }
+  ],
+  "index": {
+    "status": 200,
+    "content_type": "text/html",
+    "bytes": 1972,
+    "contains_loader": true
+  },
+  "assets": [
+    {
+      "path": "chunks/0.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 7400,
+      "sha1": "90e7b3625b72ccc41846f62f20628bcfd43d4b4d"
+    },
+    {
+      "path": "chunks/1.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 7400,
+      "sha1": "d266b7a19271cd4432b6f18f29824395a4eaf101"
+    },
+    {
+      "path": "chunks/2.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 7400,
+      "sha1": "c393a0acf5d16204d57df944900876afe31a3d5e"
+    },
+    {
+      "path": "chunks/3.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 7400,
+      "sha1": "b3950a3ad1bbdef0d2e987d133e708aa37fb4d68"
+    },
+    {
+      "path": "chunks/4a1.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 925,
+      "sha1": "d19c3d45c1bff2a662752b78d89f28ab8a7524fb"
+    },
+    {
+      "path": "chunks/4a2.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 925,
+      "sha1": "2a83ca1b9f4371f3a3cc71a1476d96195ec13f56"
+    },
+    {
+      "path": "chunks/4a3.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 925,
+      "sha1": "be2e879de87400a744b8b12733ec61eb4c2f749e"
+    },
+    {
+      "path": "chunks/4a4.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 925,
+      "sha1": "a1bb7117e80607ba5637219e565f18a783e08eb0"
+    },
+    {
+      "path": "chunks/4b.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 3700,
+      "sha1": "8a69b38953b7bafa7b21c9dca9bf83dde8696d6b"
+    },
+    {
+      "path": "chunks/5a.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 3634,
+      "sha1": "f0dc2e798d76f6a51268b0899cd01a254c487f98"
+    },
+    {
+      "path": "chunks/5b.txt",
+      "status": 200,
+      "content_type": "text/plain",
+      "bytes": 3634,
+      "sha1": "89324a0eadb106b9ce653b128a5b0582bb8060fa"
+    }
+  ],
+  "all_assets_http_200": true,
+  "decode_error": null,
+  "reconstructed_document": {
+    "bytes": 116897,
+    "sha256": "f7844a9432b64c559230ec858009775055856e7fa72005fb8f7edb039ab48ebb",
+    "matches_expected_bytes": true,
+    "matches_expected_sha256": true,
+    "title": "Converging Waters | Integrated Internal Research Synthesis",
+    "id_count": 28,
+    "duplicate_ids": [],
+    "internal_anchor_count": 10,
+    "missing_internal_targets": [],
+    "image_count": 6,
+    "embedded_image_count": 6,
+    "broken_embedded_images": [],
+    "external_link_count": 26,
+    "malformed_external_links": []
+  },
+  "passed": true
+}
