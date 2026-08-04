@@ -1,0 +1,166 @@
+name: Validate Converging Waters publication
+
+on:
+  push:
+    branches:
+      - gh-pages
+    paths-ignore:
+      - validation-report.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out publication branch
+        uses: actions/checkout@v4
+
+      - name: Validate public deployment and assets
+        env:
+          SITE_URL: https://felipeacha.github.io/uno/
+          EXPECTED_SHA256: f7844a9432b64c559230ec858009775055856e7fa72005fb8f7edb039ab48ebb
+          EXPECTED_BYTES: "116897"
+        run: |
+          python - <<'PY'
+          import base64, gzip, hashlib, json, os, re, time
+          from datetime import datetime, timezone
+          from html.parser import HTMLParser
+          from urllib.error import HTTPError, URLError
+          from urllib.request import Request, urlopen
+
+          site = os.environ['SITE_URL']
+          files = [
+              'chunks/0.txt','chunks/1.txt','chunks/2.txt','chunks/3.txt',
+              'chunks/4a1.txt','chunks/4a2.txt','chunks/4a3.txt','chunks/4a4.txt',
+              'chunks/4b.txt','chunks/5a.txt','chunks/5b.txt'
+          ]
+
+          def fetch(url, timeout=30):
+              req = Request(url, headers={'User-Agent':'Converging-Waters-Validator/1.0'})
+              with urlopen(req, timeout=timeout) as r:
+                  return r.status, r.headers.get_content_type(), r.read()
+
+          index_status = None
+          index_type = None
+          index_body = b''
+          attempts = []
+          for attempt in range(24):
+              try:
+                  index_status, index_type, index_body = fetch(site)
+                  attempts.append({'attempt': attempt + 1, 'status': index_status})
+                  if index_status == 200 and b'Loading Converging Waters' in index_body:
+                      break
+              except Exception as exc:
+                  attempts.append({'attempt': attempt + 1, 'error': str(exc)})
+              time.sleep(10)
+
+          asset_results = []
+          remote_parts = []
+          for path in files:
+              url = site + path
+              try:
+                  status, content_type, body = fetch(url)
+                  asset_results.append({
+                      'path': path,
+                      'status': status,
+                      'content_type': content_type,
+                      'bytes': len(body),
+                      'sha1': hashlib.sha1(b'blob ' + str(len(body)).encode() + b'\0' + body).hexdigest()
+                  })
+                  remote_parts.append(body.decode('utf-8'))
+              except Exception as exc:
+                  asset_results.append({'path': path, 'error': str(exc)})
+
+          decoded = b''
+          decode_error = None
+          try:
+              decoded = gzip.decompress(base64.b64decode(''.join(remote_parts)))
+          except Exception as exc:
+              decode_error = str(exc)
+
+          class AuditParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids=[]; self.hrefs=[]; self.images=[]; self.title=''; self._title=False
+              def handle_starttag(self, tag, attrs):
+                  d=dict(attrs)
+                  if 'id' in d: self.ids.append(d['id'])
+                  if tag=='a' and 'href' in d: self.hrefs.append(d['href'])
+                  if tag=='img': self.images.append(d.get('src',''))
+                  if tag=='title': self._title=True
+              def handle_endtag(self, tag):
+                  if tag=='title': self._title=False
+              def handle_data(self, data):
+                  if self._title: self.title += data
+
+          parser = AuditParser()
+          if decoded:
+              parser.feed(decoded.decode('utf-8'))
+
+          internal_targets = {h[1:] for h in parser.hrefs if h.startswith('#') and len(h)>1}
+          missing_internal_targets = sorted(internal_targets - set(parser.ids))
+          duplicate_ids = sorted({x for x in parser.ids if parser.ids.count(x)>1})
+          embedded_images = [x for x in parser.images if x.startswith('data:image/')]
+          external_links = sorted({h for h in parser.hrefs if h.startswith(('http://','https://'))})
+          malformed_external_links = [h for h in external_links if not re.match(r'^https?://[^\s]+$', h)]
+
+          report = {
+              'validated_at_utc': datetime.now(timezone.utc).isoformat(),
+              'site_url': site,
+              'deployment_attempts': attempts,
+              'index': {
+                  'status': index_status,
+                  'content_type': index_type,
+                  'bytes': len(index_body),
+                  'contains_loader': b'Loading Converging Waters' in index_body
+              },
+              'assets': asset_results,
+              'all_assets_http_200': all(x.get('status') == 200 for x in asset_results),
+              'decode_error': decode_error,
+              'reconstructed_document': {
+                  'bytes': len(decoded),
+                  'sha256': hashlib.sha256(decoded).hexdigest() if decoded else None,
+                  'matches_expected_bytes': len(decoded) == int(os.environ['EXPECTED_BYTES']),
+                  'matches_expected_sha256': hashlib.sha256(decoded).hexdigest() == os.environ['EXPECTED_SHA256'] if decoded else False,
+                  'title': parser.title,
+                  'id_count': len(parser.ids),
+                  'duplicate_ids': duplicate_ids,
+                  'internal_anchor_count': len(internal_targets),
+                  'missing_internal_targets': missing_internal_targets,
+                  'image_count': len(parser.images),
+                  'embedded_image_count': len(embedded_images),
+                  'broken_embedded_images': [x for x in parser.images if not x.startswith('data:image/')],
+                  'external_link_count': len(external_links),
+                  'malformed_external_links': malformed_external_links
+              }
+          }
+          report['passed'] = all([
+              report['index']['status'] == 200,
+              report['index']['contains_loader'],
+              report['all_assets_http_200'],
+              report['decode_error'] is None,
+              report['reconstructed_document']['matches_expected_bytes'],
+              report['reconstructed_document']['matches_expected_sha256'],
+              not duplicate_ids,
+              not missing_internal_targets,
+              not report['reconstructed_document']['broken_embedded_images'],
+              not malformed_external_links
+          ])
+          with open('validation-report.json','w',encoding='utf-8') as f:
+              json.dump(report,f,indent=2,ensure_ascii=False)
+          print(json.dumps(report,indent=2,ensure_ascii=False))
+          if not report['passed']:
+              raise SystemExit('Publication validation failed')
+          PY
+
+      - name: Commit validation report
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add validation-report.json
+          git commit -m "record successful Converging Waters publication validation [skip ci]" || exit 0
+          git push
