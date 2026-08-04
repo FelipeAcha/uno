@@ -1,0 +1,138 @@
+name: Browser-validate Converging Waters publication
+
+on:
+  push:
+    branches:
+      - gh-pages
+    paths-ignore:
+      - browser-validation-report.json
+      - validation-report.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  browser-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out publication branch
+        uses: actions/checkout@v4
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Validate rendered site on desktop and mobile
+        env:
+          SITE_URL: https://felipeacha.github.io/uno/
+        run: |
+          node <<'JS'
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const configurations = [
+              { name: 'desktop', viewport: { width: 1440, height: 1200 } },
+              { name: 'mobile', viewport: { width: 390, height: 844 }, isMobile: true }
+            ];
+            const results = [];
+
+            for (const config of configurations) {
+              const context = await browser.newContext({
+                viewport: config.viewport,
+                isMobile: Boolean(config.isMobile)
+              });
+              const page = await context.newPage();
+              const consoleErrors = [];
+              const pageErrors = [];
+              page.on('console', message => {
+                if (message.type() === 'error') consoleErrors.push(message.text());
+              });
+              page.on('pageerror', error => pageErrors.push(String(error)));
+
+              const response = await page.goto(process.env.SITE_URL, {
+                waitUntil: 'networkidle',
+                timeout: 120000
+              });
+              await page.waitForFunction(() =>
+                document.title.includes('Converging Waters') &&
+                document.body.innerText.length > 40000,
+                { timeout: 120000 }
+              );
+
+              const audit = await page.evaluate(() => {
+                const images = [...document.images];
+                const internalLinks = [...document.querySelectorAll('a[href^="#"]')];
+                const externalLinks = [...document.querySelectorAll('a[href^="http://"],a[href^="https://"]')];
+                return {
+                  title: document.title,
+                  body_text_characters: document.body.innerText.length,
+                  image_count: images.length,
+                  broken_images: images
+                    .filter(img => !img.complete || img.naturalWidth === 0)
+                    .map(img => img.getAttribute('src')),
+                  internal_anchor_count: internalLinks.length,
+                  missing_internal_targets: internalLinks
+                    .map(a => a.getAttribute('href').slice(1))
+                    .filter(id => id && !document.getElementById(id)),
+                  external_link_count: externalLinks.length,
+                  unsafe_external_links: externalLinks
+                    .filter(a => a.target !== '_blank' || !String(a.rel).includes('noopener'))
+                    .map(a => a.href),
+                  scroll_width: document.documentElement.scrollWidth,
+                  client_width: document.documentElement.clientWidth,
+                  horizontal_overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+                  main_heading: document.querySelector('h1')?.innerText || null
+                };
+              });
+
+              results.push({
+                viewport: config,
+                http_status: response ? response.status() : null,
+                console_errors: consoleErrors,
+                page_errors: pageErrors,
+                ...audit
+              });
+              await context.close();
+            }
+
+            await browser.close();
+            const passed = results.every(result =>
+              result.http_status === 200 &&
+              result.title.includes('Converging Waters') &&
+              result.body_text_characters > 40000 &&
+              result.image_count === 6 &&
+              result.broken_images.length === 0 &&
+              result.missing_internal_targets.length === 0 &&
+              result.unsafe_external_links.length === 0 &&
+              result.horizontal_overflow === false &&
+              result.console_errors.length === 0 &&
+              result.page_errors.length === 0
+            );
+            const report = {
+              validated_at_utc: new Date().toISOString(),
+              site_url: process.env.SITE_URL,
+              browser: 'Playwright Chromium',
+              results,
+              passed
+            };
+            fs.writeFileSync('browser-validation-report.json', JSON.stringify(report, null, 2));
+            console.log(JSON.stringify(report, null, 2));
+            if (!passed) process.exit(1);
+          })().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          JS
+
+      - name: Commit browser validation report
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add browser-validation-report.json
+          git commit -m "record successful browser validation [skip ci]" || exit 0
+          git push
