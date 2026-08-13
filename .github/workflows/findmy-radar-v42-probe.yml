@@ -21,7 +21,7 @@ jobs:
           xcrun swiftc --version
       - name: Typecheck AppKit + CoreBluetooth entry point
         run: |
-          xcrun swiftc -warnings-as-errors -typecheck \
+          xcrun swiftc -parse-as-library -warnings-as-errors -typecheck \
             findmy-radar-ci/AppEntryProbe.swift \
             -framework Cocoa -framework CoreBluetooth -framework Foundation
       - name: Build native probe
