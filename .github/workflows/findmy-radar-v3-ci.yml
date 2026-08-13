@@ -1,0 +1,34 @@
+name: FindMy Radar v3 Tahoe CI
+
+on:
+  push:
+    branches: [findmy-radar-v3-ci]
+    paths:
+      - 'scratch/findmy-radar-v3/**'
+      - '.github/workflows/findmy-radar-v3-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  tahoe-arm64-compile:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        run: |
+          sw_vers
+          uname -m
+          xcrun swiftc --version
+      - name: Typecheck CoreBluetooth probe
+        run: |
+          xcrun swiftc -warnings-as-errors -typecheck \
+            scratch/findmy-radar-v3/RadarCompileProbe.swift \
+            -framework Foundation -framework CoreBluetooth
+      - name: Compile CoreBluetooth probe
+        run: |
+          xcrun swiftc -O \
+            scratch/findmy-radar-v3/RadarCompileProbe.swift \
+            -framework Foundation -framework CoreBluetooth \
+            -o /tmp/RadarCompileProbe
+      - name: Run parser self-test
+        run: /tmp/RadarCompileProbe
