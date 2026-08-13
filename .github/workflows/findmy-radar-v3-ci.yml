@@ -19,16 +19,21 @@ jobs:
           sw_vers
           uname -m
           xcrun swiftc --version
-      - name: Typecheck CoreBluetooth probe
+      - name: Typecheck CoreBluetooth API probe
         run: |
           xcrun swiftc -warnings-as-errors -typecheck \
             scratch/findmy-radar-v3/RadarCompileProbe.swift \
             -framework Foundation -framework CoreBluetooth
-      - name: Compile CoreBluetooth probe
+      - name: Typecheck exact v3 source
+        run: |
+          xcrun swiftc -typecheck \
+            scratch/findmy-radar-v3/FindMyBLERadar.swift \
+            -framework Foundation -framework CoreBluetooth
+      - name: Compile exact v3 source
         run: |
           xcrun swiftc -O \
-            scratch/findmy-radar-v3/RadarCompileProbe.swift \
+            scratch/findmy-radar-v3/FindMyBLERadar.swift \
             -framework Foundation -framework CoreBluetooth \
-            -o /tmp/RadarCompileProbe
-      - name: Run parser self-test
-        run: /tmp/RadarCompileProbe
+            -o /tmp/FindMyBLERadar
+      - name: Run v3 parser and scoring self-test
+        run: /tmp/FindMyBLERadar --self-test
