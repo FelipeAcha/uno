@@ -24,7 +24,12 @@ jobs:
           xcrun swiftc -parse-as-library -warnings-as-errors -typecheck \
             findmy-radar-ci/AppEntryProbe.swift \
             -framework Cocoa -framework CoreBluetooth -framework Foundation
-      - name: Build native probe
+      - name: Typecheck radar AppKit surface and scan callbacks
+        run: |
+          xcrun swiftc -warnings-as-errors -typecheck \
+            findmy-radar-ci/AppKitSurfaceProbe.swift \
+            -framework Cocoa -framework CoreBluetooth -framework Foundation
+      - name: Build native entry probe
         run: |
           xcrun swiftc -O -parse-as-library \
             findmy-radar-ci/AppEntryProbe.swift \
