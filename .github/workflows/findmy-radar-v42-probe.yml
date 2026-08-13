@@ -1,0 +1,34 @@
+name: FindMy Radar v4.2 Native Probe
+
+on:
+  push:
+    branches: [findmy-radar-hardening-v42]
+    paths:
+      - 'findmy-radar-ci/**'
+      - '.github/workflows/findmy-radar-v42-probe.yml'
+  workflow_dispatch:
+
+jobs:
+  tahoe-arm64-probe:
+    runs-on: macos-26
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Environment
+        run: |
+          sw_vers
+          uname -m
+          xcrun swiftc --version
+      - name: Typecheck AppKit + CoreBluetooth entry point
+        run: |
+          xcrun swiftc -warnings-as-errors -typecheck \
+            findmy-radar-ci/AppEntryProbe.swift \
+            -framework Cocoa -framework CoreBluetooth -framework Foundation
+      - name: Build native probe
+        run: |
+          xcrun swiftc -O -parse-as-library \
+            findmy-radar-ci/AppEntryProbe.swift \
+            -framework Cocoa -framework CoreBluetooth -framework Foundation \
+            -o /tmp/FindMyRadarProbe
+          file /tmp/FindMyRadarProbe
+          test "$(uname -m)" = "arm64"
