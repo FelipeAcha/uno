@@ -24,22 +24,18 @@ jobs:
           xcrun swiftc -warnings-as-errors -typecheck \
             scratch/findmy-radar-v3/RadarCompileProbe.swift \
             -framework Foundation -framework CoreBluetooth
-      - name: Apply reviewed source corrections
+      - name: Apply reviewed v3.1 source patch
+        run: python3 scratch/findmy-radar-v3/apply_v31_patch.py
+      - name: Verify read-only and separated-state invariants
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('scratch/findmy-radar-v3/FindMyBLERadar.swift')
-          s = p.read_text()
-          s = s.replace('$p0.id', '$0.id')
-          s = s.replace('let ids = active.map { "\\($0.id):\\(String(format: "%.1f", $0.robustRSSI)" }.joined(separator: "|")',
-                        'let ids = active.map { "\\($0.id):\\(String(format: "%.1f", $0.robustRSSI))" }.joined(separator: "|")')
-          s = s.replace('strengthBand(score))', 'strengthBand(score: score))')
-          s = s.replace('strengthBand(score)))', 'strengthBand(score: score)))')
-          p.write_text(s)
-          PY
-      - name: Typecheck corrected v3 source
+          grep -F 'CBCentralManagerScanOptionAllowDuplicatesKey: true' scratch/findmy-radar-v3/FindMyBLERadar.swift
+          grep -F 'SEPARATED Offline Finding only' scratch/findmy-radar-v3/FindMyBLERadar.swift
+          grep -F 'Apple Device' scratch/findmy-radar-v3/FindMyBLERadar.swift
+          if grep -F '.connect(' scratch/findmy-radar-v3/FindMyBLERadar.swift; then exit 2; fi
+          if grep -F 'writeValue' scratch/findmy-radar-v3/FindMyBLERadar.swift; then exit 2; fi
+      - name: Typecheck corrected v3.1 source
         run: |
-          xcrun swiftc -typecheck \
+          xcrun swiftc -warnings-as-errors -typecheck \
             scratch/findmy-radar-v3/FindMyBLERadar.swift \
             -framework Foundation -framework CoreBluetooth
       - name: Build locally-signable app bundle
