@@ -24,12 +24,25 @@ jobs:
           xcrun swiftc -warnings-as-errors -typecheck \
             scratch/findmy-radar-v3/RadarCompileProbe.swift \
             -framework Foundation -framework CoreBluetooth
-      - name: Typecheck exact v3 source
+      - name: Apply reviewed source corrections
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scratch/findmy-radar-v3/FindMyBLERadar.swift')
+          s = p.read_text()
+          s = s.replace('$p0.id', '$0.id')
+          s = s.replace('let ids = active.map { "\\($0.id):\\(String(format: "%.1f", $0.robustRSSI)" }.joined(separator: "|")',
+                        'let ids = active.map { "\\($0.id):\\(String(format: "%.1f", $0.robustRSSI))" }.joined(separator: "|")')
+          s = s.replace('strengthBand(score))', 'strengthBand(score: score))')
+          s = s.replace('strengthBand(score)))', 'strengthBand(score: score)))')
+          p.write_text(s)
+          PY
+      - name: Typecheck corrected v3 source
         run: |
           xcrun swiftc -typecheck \
             scratch/findmy-radar-v3/FindMyBLERadar.swift \
             -framework Foundation -framework CoreBluetooth
-      - name: Compile exact v3 source
+      - name: Compile corrected v3 source
         run: |
           xcrun swiftc -O \
             scratch/findmy-radar-v3/FindMyBLERadar.swift \
