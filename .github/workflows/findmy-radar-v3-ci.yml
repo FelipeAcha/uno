@@ -42,11 +42,32 @@ jobs:
           xcrun swiftc -typecheck \
             scratch/findmy-radar-v3/FindMyBLERadar.swift \
             -framework Foundation -framework CoreBluetooth
-      - name: Compile corrected v3 source
+      - name: Build locally-signable app bundle
         run: |
+          APP='/tmp/FindMy BLE Radar.app'
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cat > "$APP/Contents/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>CFBundleExecutable</key><string>FindMyBLERadar</string>
+          <key>CFBundleIdentifier</key><string>pe.felipeacha.findmybleradar</string>
+          <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+          <key>CFBundleName</key><string>FindMy BLE Radar</string>
+          <key>CFBundlePackageType</key><string>APPL</string>
+          <key>CFBundleShortVersionString</key><string>3.1</string>
+          <key>CFBundleVersion</key><string>31</string>
+          <key>LSMinimumSystemVersion</key><string>13.0</string>
+          <key>NSBluetoothAlwaysUsageDescription</key><string>FindMy BLE Radar uses Bluetooth only to discover nearby Apple Offline Finding advertisements and show relative signal strength while locating the owner's lost device. It never connects, pairs, or writes to nearby devices.</string>
+          </dict></plist>
+          PLIST
+          plutil -lint "$APP/Contents/Info.plist"
           xcrun swiftc -O \
             scratch/findmy-radar-v3/FindMyBLERadar.swift \
             -framework Foundation -framework CoreBluetooth \
-            -o /tmp/FindMyBLERadar
-      - name: Run v3 parser and scoring self-test
-        run: /tmp/FindMyBLERadar --self-test
+            -o "$APP/Contents/MacOS/FindMyBLERadar"
+          codesign --force --deep --sign - "$APP"
+          codesign --verify --deep --strict "$APP"
+          /usr/libexec/PlistBuddy -c 'Print :NSBluetoothAlwaysUsageDescription' "$APP/Contents/Info.plist"
+      - name: Run bundled parser and scoring self-test
+        run: "'/tmp/FindMy BLE Radar.app/Contents/MacOS/FindMyBLERadar' --self-test"
